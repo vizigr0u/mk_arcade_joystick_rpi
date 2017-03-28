@@ -182,11 +182,16 @@ static const int mk_max_arcade_buttons = 12;
 static const int mk_arcade_gpio_maps[] = {4,  17,    27,  22,    10,    9,      25, 24, 23, 18, 15, 14 };
 // 2nd joystick on the b+ GPIOS                 up, down, left, right, start, select, a,  b,  tr, y,  x,  tl
 static const int mk_arcade_gpio_maps_bplus[] = {11, 5,    6,    13,    19,    26,     21, 20, 16, 12, 7,  8 };
+
 // Map of the mcp23017 on GPIOA            up, down, left, right, start, select
 static const int mk_arcade_gpioa_maps[] = {0,  1,    2,    3,     4,     5      };
-
 // Map of the mcp23017 on GPIOB            a, b, tr, y, x, tl
 static const int mk_arcade_gpiob_maps[] = {0, 1, 2,  3, 4, 5 };
+
+enum { KBA=0, KBB=1 };
+// Map of the mcp23017 kitsch-bench          up, down, left, right, start, select, a,  b,   tr,   y,   x, tl
+static const int mk_arcade_kitsch_ports[] = {KBB, KBB, KBB,  KBB,   KBB,   KBB,  KBA, KBA, KBA, KBA, KBA, KBB };
+static const int mk_arcade_kitsch_maps[] =  {0,   5,   3,    4,      7,    6,      3,   2,   5,   7,   6, 1 };
 
 // Map joystick on the b+ GPIOS with TFT      up, down, left, right, start, select, a,  b,  tr, y,  x,  tl
 static const int mk_arcade_gpio_maps_tft[] = {21, 13,    26,    19,    5,    6,     22, 4, 20, 17, 27,  16 };
@@ -288,6 +293,20 @@ static void i2c_read(char dev_addr, char reg_addr, char *buf, unsigned short len
 
 /*  ------------------------------------------------------------------------------- */
 
+static void mk_mcp23017_kitsch_bench_read_packet(struct mk_pad * pad, unsigned char *data) {
+    int i;
+    char results[2];
+    char result;
+
+    i2c_read(pad->mcp23017addr, MPC23017_GPIOA_READ, &results[KBA], 1);
+    i2c_read(pad->mcp23017addr, MPC23017_GPIOB_READ, &results[KBB], 1);
+
+    for (i = 0; i < 12; i++) {
+        result = results[mk_arcade_kitsch_ports[i]];
+        data[i] = !((result >> mk_arcade_kitsch_maps[i]) & 0x1);
+    }
+}
+
 static void mk_mcp23017_read_packet(struct mk_pad * pad, unsigned char *data) {
     int i;
     char resultA, resultB;
@@ -345,7 +364,7 @@ static void mk_process_packet(struct mk *mk) {
             mk_input_report(pad, data);
         }
         if (pad->type == MK_ARCADE_MCP23017) {
-            mk_mcp23017_read_packet(pad, data);
+            mk_mcp23017_kitsch_bench_read_packet(pad, data);
             mk_input_report(pad, data);
         }
     }
